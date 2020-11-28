@@ -1,0 +1,11 @@
+{
+    /**
+     * ESBuild doesn't cover all ES5 features,
+     * so we still rely on Babel to avoid a few potential issues
+     * on older environments.
+     */
+    "plugins": [
+        "@babel/plugin-proposal-async-generator-functions",
+        "@babel/plugin-transform-for-of"
+    ]
+}

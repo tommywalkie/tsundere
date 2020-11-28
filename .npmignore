@@ -1,0 +1,19 @@
+# Source code and dev scripts
+src
+__dev__
+**/*.ts
+
+# Babel plugins
+.babelrc
+
+# Generated typings
+!dist/index.d.ts
+
+# XO configuration
+.xo-config.json
+
+# TypeScript configuration
+tsconfig.json
+
+# Include license
+!LICENSE

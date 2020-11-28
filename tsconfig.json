@@ -1,0 +1,8 @@
+{
+    "include": ["src/**/*", "dist/**/*", "./test.ts"],
+    "compilerOptions": {
+        "baseUrl": ".",
+        "strict": true,
+        "types": ["node"]
+    }
+}
