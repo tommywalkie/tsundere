@@ -9,8 +9,11 @@ __dev__
 # Generated typings
 !dist/index.d.ts
 
-# XO configuration
-.xo-config.json
+# Benchmarks
+benches
+
+# Rollup
+rollup.config.js
 
 # TypeScript configuration
 tsconfig.json

@@ -33,7 +33,6 @@ TODO
 npm install     # Install dependencies
 npm run build   # Transpile, generate typings, bundle for production
 npm run test    # Run test(s)
-npm run lint    # Run linting (via XO)
 ```
 
 ## License

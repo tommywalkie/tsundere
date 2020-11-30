@@ -15,22 +15,8 @@ const pipeline: (
 
 const rootDir = dirname(__dirname)
 const srcDir = resolve(`${rootDir}/src`)
+const benchesDir = resolve(`${rootDir}/benches`)
 const distDir = resolve(`${rootDir}/__dev__`)
-
-const _read = async (path: string): Promise<string> => {
-	const stream: NodeJS.ReadableStream = createReadStream(resolve(path))
-	return new Promise((
-		resolve: (value?: string | PromiseLike<string>) => void,
-		reject: (reason?: any) => void
-	) => {
-		let data = ''
-		stream.on('data', chunk => {
-			data += chunk
-		})
-		stream.on('end', () => resolve(data))
-		stream.on('error', error => reject(error))
-	})
-}
 
 const getFiles = async function* (currentDir: string): AsyncGenerator<string, void> {
 	const dirents: Dirent[] = await readdir(currentDir, {withFileTypes: true})
@@ -44,49 +30,46 @@ const getFiles = async function* (currentDir: string): AsyncGenerator<string, vo
 	}
 }
 
-const getDirectories = async function* (currentDir: string): AsyncGenerator<string, void> {
-	const dirents = await readdir(currentDir, {withFileTypes: true})
-	for (const dirent of dirents) {
-		const path = resolve(currentDir, dirent.name)
-		if (dirent.isDirectory()) {
-			yield* getDirectories(path)
-			yield path
-		}
-	}
+const processFile = async (
+    file: string,
+    service: Service,
+    srcDir: string,
+    distDir: string,
+    subDir: string = '/'
+) => {
+    const outFile = join(subDir, file.slice(srcDir.length))
+    const extFile = extname(file)
+    const outFilename = outFile.slice(0, Math.max(0, outFile.length - extFile.length))
+    await mkdir(join(distDir, dirname(outFile)), {
+        recursive: true
+    }).catch(console.error)
+    return await pipeline(
+        createReadStream(resolve(file)),
+        async function* (source) {
+            source.setEncoding('utf8')
+            let content = ''
+            for await (const chunk of source) {
+                content += chunk
+            }
+
+            const {code} = await service.transform(content, {
+                loader: 'tsx',
+                format: 'cjs',
+                target: 'es2018'
+            })
+            yield code
+        },
+        createWriteStream(join(distDir, outFilename + '.js'))
+    )
 };
 
 (async () => {
 	const service: Service = await startService()
-	for await (const dir of getDirectories('src')) {
-		console.log(dir)
+    for await (const file of getFiles('src')) {
+		await processFile(file, service, srcDir, distDir)
+    }
+    for await (const file of getFiles('benches')) {
+		await processFile(file, service, benchesDir, distDir, 'benches')
 	}
-
-	for await (const file of getFiles('src')) {
-		const outFile = file.slice(srcDir.length)
-		const extFile = extname(file)
-		const outFilename = outFile.slice(0, Math.max(0, outFile.length - extFile.length))
-		await mkdir(join(distDir, dirname(outFile)), {
-			recursive: true
-		}).catch(console.error)
-		await pipeline(
-			createReadStream(resolve(file)),
-			async function* (source) {
-				source.setEncoding('utf8')
-				let content = ''
-				for await (const chunk of source) {
-					content += chunk
-				}
-
-				const {code} = await service.transform(content, {
-					loader: 'tsx',
-					format: 'cjs',
-					target: 'es2018'
-				})
-				yield code
-			},
-			createWriteStream(join(distDir, outFilename + '.js'))
-		)
-	}
-
 	service.stop()
 })()
