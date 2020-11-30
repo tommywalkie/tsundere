@@ -14,6 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 export {getFiles, getDirectories} from './fs'
-export {TsundereHook, TsundereTask, TsundereTaskOptions, series, parallel} from './task'
+export {TsundereTask, series, parallel} from './task'
+export type {TsundereTaskOptions, TsundereTaskReport} from './task'

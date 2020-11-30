@@ -45,11 +45,9 @@ const five = new TsundereTask(async () => {
 		}, 4000)
 	})
 })
-console.log(one.instanciatedAt);
-(async () => {
-	await series([one, two, three, four, five]).then(() => {
-		console.log(one.beginTimestamp)
-		console.log(one.endTimestamp)
-	})
-	await parallel([one, two, three, four, five])
+;(async () => {
+	const first = await series([one, two, three, four, five])
+    console.log({first});
+    const second = await parallel([one, two, three, four, five])
+    console.log({second});
 })()

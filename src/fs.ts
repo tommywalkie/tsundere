@@ -1,6 +1,9 @@
 import {resolve} from 'path'
-import {readdir} from 'fs/promises'
+import {promises} from 'fs'
 import type {Dirent} from 'fs'
+
+const {readdir} = promises
+
 export const getFiles = async function* (currentDir: string): AsyncGenerator<string, void> {
 	const dirents: Dirent[] = await readdir(currentDir, {withFileTypes: true})
 	for (const dirent of dirents) {

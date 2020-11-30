@@ -10,3 +10,6 @@ __dev__
 # Lock files
 package-lock.json
 yarn.lock
+
+# Yarn
+yarn-error.log
