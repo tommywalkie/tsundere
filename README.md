@@ -48,7 +48,7 @@ Running a task returns a report, including the task label (`symbol()` by default
 
 ```json
 {
-   "__id": 'my-job',
+   "__id": "my-job",
    "result": 2,
    "duration": 1.4819
 }

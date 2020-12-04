@@ -1,6 +1,6 @@
 {
   "name": "tsundere",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Modern task runner for the stubborn ones",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
