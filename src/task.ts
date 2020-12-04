@@ -1,58 +1,21 @@
-import type {PathLike} from 'fs'
+import { startTimer, stopTimer } from './timer'
 
 /**
- * This regex allows to retrieve where the TsundereTask got instanciated,
- * using an error trace as input. https://regex101.com/r/dMenCi/1
- *
- * @example
- * const trace = `Error
- *  at new TsundereTask (C:/foo/node_modules/tsundere/dist/index.js:17:13)
- *  at Object.<anonymous> (C:/foo/src/index.js:23:11)
- *  at Module._compile (node:internal/modules/cjs/loader:1083:30)
- *  [...]`.replace(INSTANCIATED_PATTERN, '$<location>') // "C:/foo/src/index.js:23:11"
+ * Asynchrounous by default function with unsized props `K`,
+ * returning a `T` typed value from a promise.
  */
-const INSTANCIATED_PATTERN =
-    /er{2}or.*\r?\n[ \t]+at (?:new )?[\w$.<>\\/:]+( \([\w$.\\/:]+\))?\r?\n+[ \t]+at (?:[\w$.<>]+ (?:\[[^\]]+] )?\()?(?<location>[\w$.\\/:]+)\)?\r?\n?(?:.*[\r\n]?)+/gim
-
-/**
- * Simple helper type, defining an asynchrounous function with unsized props.
- */
-export type TsundereHook = (props?: Record<string, any>) => Promise<any>
-
-/**
- * Expected task option fields, used as `TsundereTask` class constructor parameters
- */
-export interface TsundereTaskOptions {
-    /**
-     * Task label
-     */
-    name?: string;
-    /**
-     * Source code location where the `TsundereTask` got instanciated
-     */
-    instanciatedAt?: string;
-    /**
-     * Hook function to be run just when the task starts running
-     */
-    onStart?: TsundereHook;
-    /**
-     * Hook function to be run just when the task ends running
-     */
-    onEnd?: TsundereHook;
-    /**
-     * Hook function to be run when the task runs into an error
-     */
-	onError?: (error: Error) => void;
-}
+export type TsundereCallback<T = any, K = Record<string, any>> = (props?: K) => Promise<T>
 
 /**
  * Task completion status report
  */
-export interface TsundereTaskReport {
+export type TsundereTaskReport<T = any> = {
+    __id: string | Symbol
     /**
-     * Task result
+     * Task callback returned value, or sub-tasks report array (mostly relevant for tasks
+     * instanciated via `<TsundereRunner>.parallel` or `<TsundereRunner>.series`).
      */
-    result: boolean
+    result: T | TsundereTaskReport[]
     /**
      * Task duration in milliseconds
      */
@@ -60,88 +23,105 @@ export interface TsundereTaskReport {
 }
 
 /**
- * Convert a NodeJS high-resolution real time generated via `process.hrtime()` to milliseconds.
+ * Nameless Tsundere compatible task object, which emits events
+ * (`start`, `end`, `error`) you can subscribe to, using browser-compatible
+ * event subscribers `<TsundereTask>.on('<event>', callback)`
+ * or `<TsundereTask>.once('<event>', callback)`
+ * 
+ * The `T` generic type (defaults to `any`) defines the expected returned
+ * value type from the task callback promise.
  */
-const hrToMs = (hrtime: [number, number]): number => 
-    (hrtime[0]* 1000000000 + hrtime[1]) / 1000000
-
-/**
- * Tsundere compatible task object instance
- */
-export class TsundereTask {
+export class TsundereTask<T = any> {
+    __id: string | Symbol = Symbol(undefined)
     /**
-     * Task label
+     * Hook function to be run by the task.
      */
-    label?: string
-    /**
-     * Source code location where the `TsundereTask` got instanciated
-     */
-    instanciatedAt: PathLike
-    /**
-     * Hook function to be run just when the task starts running
-     */
-    onStart?: TsundereHook
-    /**
-     * Hook function to be run just when the task ends running
-     */
-    onEnd?: TsundereHook
-    /**
-     * Hook function to be run when the task runs into an error
-     */
-	onError: (error: Error) => void = error => {
-        throw error
+    callback: TsundereCallback
+    private e: Record<string, any[]> = {}
+	constructor(callback: TsundereCallback<T>) {
+        this.callback = callback
     }
     /**
-     * Hook function to be run by the task, after `onStart` and before `onEnd`.
+     * Chainable function to add new event listener,
+     * available events are `start`, `end`, `error`. COnsider using `once`
      */
-	callback: TsundereHook = async () => {}
-	constructor(callback: TsundereHook = async () => {}, options: TsundereTaskOptions = {}) {
-		try {
-			throw new Error('This will help us retrieving the trace.')
-		} catch (error) {
-            if (options.instanciatedAt)
-                this.instanciatedAt = options.instanciatedAt
-            else
-                this.instanciatedAt = String(error.stack).replace(INSTANCIATED_PATTERN, '$<location>')
-		}
-        if (options.onError) this.onError = options.onError
-        if (options.onStart) this.onStart = options.onStart
-        if (options.onEnd) this.onEnd = options.onEnd
-		if (callback) this.callback = callback
-	}
+    on = (event: string, fn: Function, ctx?: any) => {
+        (this.e[event] || (this.e[event] = [])).push({ fn, ctx })
+        return this
+    }
     /**
-     * Runs the task and returns a task report with calculated duration.
+     * Chainable function to add new event listener,
+     * which will happen only once then gets deleted from the task instance.
      */
-	run = async (props?: Record<string, any>): Promise<TsundereTaskReport> => {
-        const beginTimestamp: [number, number] = process.hrtime()
-        if (this.onStart) this.onStart()
+    once = (event: string, fn: Function, ctx?: any): any => {
+        let self = this;
+        const listener = function () {
+          self.off(event, listener)
+          fn.apply(ctx, arguments)
+        }
+        listener._ = fn
+        return this.on(event, listener, ctx)
+    }
+    /**
+     * Internal function used by `<TsundereBaseTask>.once`
+     * in order to stop all listeners from a single event.
+     * @private
+     */
+    private off = (event: string, callback: Function) => {
+        let evts = this.e[event]
+        let liveEvents = []
+        if (evts && callback) {
+            for (let i = 0, len = this.e[event].length; i < len; i++)
+                if (evts[i].fn !== callback && evts[i].fn._ !== callback)
+                    liveEvents.push(evts[i])
+        }
+        (liveEvents.length)
+            ? this.e[event] = liveEvents
+            : delete this.e[event]
+        return this
+    }
+    /**
+     * Emit new node-browser-compatible event.
+     */
+    emit = (event: string, ...args: any) => {
+        let evtArr = (this.e[event] || []).slice()
+        let len = evtArr.length
+        for (let i = 0; i < len; i++)
+            evtArr[i].fn.apply(evtArr[i].ctx, [...args])
+    }
+    /**
+     * Runs the task and returns a task report with calculated duration and
+     * sub-tasks reports, if exists.
+     */
+	public run = async (props?: Record<string, any>): Promise<TsundereTaskReport<T>> => {
+        const begin: number | [number, number] = startTimer()
+        this.emit('start')
         return await this.callback(props).then((result: any) => {
-            if (this.onEnd) this.onEnd()
+            this.emit('end')
             return {
+                __id: this.__id,
                 result,
-                duration: hrToMs(process.hrtime(beginTimestamp))
-            } as TsundereTaskReport
+                duration: stopTimer(begin)
+            }
         }).catch((reason: any) => {
+            this.emit('error', reason)
             throw new Error(`Error encountered : ${reason}`)
         })
 	}
 }
 
 /**
- * Run tasks in sequence
+ * Shortcut method for creating a nameless `TsundereTask` instance
  */
-export const series = async (tasks: TsundereTask[]): Promise<TsundereTaskReport[]> => {
-    let state: any[] = []
-    return await tasks.reduce(async (previousPromise: any, nextPromise: TsundereTask) => {
-        return await previousPromise.then(async (result: any) => {
-            state.push(result)
-            return await nextPromise.run()
-        })
-    }, Promise.resolve()).then(() => state.filter(el => el !== undefined))
+export function task<T = any>(callback: TsundereCallback<T>): TsundereTask<T> {
+    return new TsundereTask(callback)
 }
 
 /**
- * Run tasks in parallel
+ * Shortcut method for creating a named `TsundereTask` instance
  */
-export const parallel = async (tasks: TsundereTask[]): Promise<TsundereTaskReport[]> =>
-	Promise.all(tasks.map(async (task: TsundereTask) => task.run()))
+export function namedTask<T = any>(name: string | Symbol, callback: TsundereCallback<T>): TsundereTask<T> {
+    const t = new TsundereTask(callback)
+    t.__id = name
+    return t
+}

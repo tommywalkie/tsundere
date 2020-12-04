@@ -1,6 +1,7 @@
 import {terser} from 'rollup-plugin-terser'
 import commonjs from 'rollup-plugin-commonjs'
 import resolve from '@rollup/plugin-node-resolve'
+import {preserveShebangs} from 'rollup-plugin-preserve-shebangs'
 
 const notice = `/**
  * @license
@@ -19,18 +20,65 @@ const notice = `/**
  * limitations under the License.
  */`
 
-export default {
+export default [{
   input: '__dev__/index.js',
-  output: [{
+  output: {
     file: 'dist/index.js',
-    format: 'cjs'
-  }],
+    format: 'cjs',
+    exports: 'named',
+  },
   plugins: [
-    resolve({
-        preferBuiltins: true
-    }),
+    resolve({ preferBuiltins: true }),
     commonjs(),
-    terser(),
-    { banner() { return notice; } }
+    { banner() { return notice } }
   ]
-}
+}, {
+    input: '__dev__/index.js',
+    output: {
+      file: 'dist/index.min.js',
+      format: 'cjs',
+      exports: 'named',
+    },
+    plugins: [
+      resolve({ preferBuiltins: true }),
+      commonjs(),
+      terser(),
+      { banner() { return notice } }
+    ]
+}, {
+    input: '__dev__/cli/index.js',
+    output: {
+      file: 'dist/cli.js',
+      format: 'cjs'
+    },
+    plugins: [
+      preserveShebangs(),
+      resolve({ preferBuiltins: true }),
+      commonjs(),
+      terser(),
+      { banner() { return notice } }
+    ]
+}, {
+    input: '__dev__/esm/bundle.js',
+    output: {
+      file: 'dist/index.esm.js',
+      format: 'esm'
+    },
+    plugins: [
+      resolve({ preferBuiltins: true }),
+      commonjs(),
+      { banner() { return notice } }
+    ]
+}, {
+    input: '__dev__/esm/bundle.js',
+    output: {
+      file: 'dist/index.esm.min.js',
+      format: 'esm'
+    },
+    plugins: [
+      resolve({ preferBuiltins: true }),
+      commonjs(),
+      terser(),
+      { banner() { return notice } }
+    ]
+}]

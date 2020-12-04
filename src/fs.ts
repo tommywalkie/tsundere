@@ -3,7 +3,9 @@ import {promises} from 'fs'
 import type {Dirent} from 'fs'
 
 const {readdir} = promises
-
+/**
+ * Retrieves files recursively from a given path
+ */
 export const getFiles = async function* (currentDir: string): AsyncGenerator<string, void> {
 	const dirents: Dirent[] = await readdir(currentDir, {withFileTypes: true})
 	for (const dirent of dirents) {
@@ -16,6 +18,9 @@ export const getFiles = async function* (currentDir: string): AsyncGenerator<str
 	}
 }
 
+/**
+ * Retrieves directories recursively from a given path
+ */
 export const getDirectories = async function* (currentDir: string): AsyncGenerator<string, void> {
 	const dirents = await readdir(currentDir, {withFileTypes: true})
 	for (const dirent of dirents) {

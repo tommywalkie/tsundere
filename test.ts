@@ -1,6 +1,8 @@
-import {TsundereTask, series, parallel} from '.'
+import { TsundereRunner, task } from './'
 
-const one = new TsundereTask(async () => {
+const tsundere = new TsundereRunner()
+
+const one = task(async () => {
 	return new Promise(resolve => {
 		console.log('A -- CALLED')
 		setTimeout(() => {
@@ -9,7 +11,7 @@ const one = new TsundereTask(async () => {
 		}, 1000)
 	})
 })
-const two = new TsundereTask(async () => {
+const two = task(async () => {
 	return new Promise(resolve => {
 		console.log('B -- CALLED')
 		setTimeout(() => {
@@ -18,7 +20,7 @@ const two = new TsundereTask(async () => {
 		}, 1000)
 	})
 })
-const three = new TsundereTask(async () => {
+const three = task(async () => {
 	return new Promise(resolve => {
 		console.log('C -- CALLED')
 		setTimeout(() => {
@@ -27,7 +29,7 @@ const three = new TsundereTask(async () => {
 		}, 1000)
 	})
 })
-const four = new TsundereTask(async () => {
+const four = task(async () => {
 	return new Promise(resolve => {
 		console.log('D -- CALLED')
 		setTimeout(() => {
@@ -36,7 +38,7 @@ const four = new TsundereTask(async () => {
 		}, 2000)
 	})
 })
-const five = new TsundereTask(async () => {
+const five = task(async () => {
 	return new Promise(resolve => {
 		console.log('E -- CALLED')
 		setTimeout(() => {
@@ -46,8 +48,29 @@ const five = new TsundereTask(async () => {
 	})
 })
 ;(async () => {
-	const first = await series([one, two, three, four, five])
-    console.log({first});
-    const second = await parallel([one, two, three, four, five])
-    console.log({second});
+    tsundere.series([one, two])
+    tsundere.task('SECOND', async () => {
+        const _ = async () => 1 + 1
+        return await _()
+    })
+    tsundere.parallel([four, four])
+    tsundere.series([one])
+    one.once('start', async () => {
+        console.log('one started once.')
+    })
+    one.once('end', async () => {
+        console.log('one ended once.')
+    })
+    four.on('start', async () => {
+        console.log('four started.')
+    })
+    four.on('end', async () => {
+        console.log('four ended.')
+    })
+    const report = await tsundere.run()
+    console.log({report})
+    console.log(report[0].result)
+    console.log(report[1].result)
+    console.log(report[2].result)
+    console.log(report[3].result)
 })()
