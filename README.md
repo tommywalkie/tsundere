@@ -1,6 +1,6 @@
-# Task runnerTsundere
+# Tsundere
 
-[![npm](https://img.shields.io/npm/v/tsundere)](https://www.npmjs.com/package/tsundere) [![install size](https://packagephobia.com/badge?p=tsundere@latest)](https://packagephobia.com/result?p=tsundere@latest) ![dependency count](https://badgen.net/bundlephobia/dependency-count/tsundere)
+[![npm](https://img.shields.io/npm/v/tsundere)](https://www.npmjs.com/package/tsundere) [![minified size](https://badgen.net/bundlephobia/min/tsundere)](https://bundlephobia.com/result?p=tsundere@latest) ![dependency count](https://badgen.net/bundlephobia/dependency-count/tsundere)
 
 Tsundere is a modern, lightweight and type-safe task runner for the stubborn ones.
 
@@ -48,9 +48,9 @@ Running a task returns a report, including the task label (`symbol()` by default
 
 ```json
 {
-   __id: 'my-job',
-   result: 2,
-   duration: 1.4819
+   "__id": 'my-job',
+   "result": 2,
+   "duration": 1.4819
 }
 ```
 
