@@ -49,7 +49,8 @@ export default [{
     input: '__dev__/cli/index.js',
     output: {
       file: 'dist/cli.js',
-      format: 'cjs'
+      format: 'cjs',
+      exports: 'named',
     },
     plugins: [
       preserveShebangs(),
@@ -62,22 +63,16 @@ export default [{
     input: '__dev__/esm/bundle.js',
     output: {
       file: 'dist/index.esm.js',
-      format: 'esm'
     },
     plugins: [
-      resolve({ preferBuiltins: true }),
-      commonjs(),
       { banner() { return notice } }
     ]
 }, {
     input: '__dev__/esm/bundle.js',
     output: {
       file: 'dist/index.esm.min.js',
-      format: 'esm'
     },
     plugins: [
-      resolve({ preferBuiltins: true }),
-      commonjs(),
       terser(),
       { banner() { return notice } }
     ]

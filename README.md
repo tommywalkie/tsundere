@@ -1,6 +1,6 @@
 # Tsundere
 
-[![npm](https://img.shields.io/npm/v/tsundere)](https://www.npmjs.com/package/tsundere) [![minified size](https://badgen.net/bundlephobia/min/tsundere)](https://bundlephobia.com/result?p=tsundere@latest) ![dependency count](https://badgen.net/bundlephobia/dependency-count/tsundere)
+[![npm](https://img.shields.io/npm/v/tsundere)](https://www.npmjs.com/package/tsundere) [![minified size](https://badgen.net/bundlephobia/min/tsundere)](https://bundlephobia.com/result?p=tsundere@latest) ![dependency count](https://badgen.net/bundlephobia/dependency-count/tsundere) [![Known Vulnerabilities](https://snyk.io/test/npm/tsundere/latest/badge.svg)](https://snyk.io/test/npm/tsundere/latest)
 
 Tsundere is a modern, lightweight and type-safe task runner for the stubborn ones.
 
@@ -10,10 +10,13 @@ Tsundere is a modern, lightweight and type-safe task runner for the stubborn one
 npm install tsundere
 ```
 
-Tsundere is Node/browser compatible and also provides minified outputs.
+Tsundere is Node/browser compatible and also provides minified outputs, CommonJS or ES modules at your option.
 
 ```html
-<script src="https://unpkg.com/tsundere/dist/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tsundere@latest/dist/index.min.js"></script>
+<script type="module">
+    import tsundere from 'https://cdn.jsdelivr.net/npm/tsundere@latest/dist/index.esm.min.js'
+</script>
 ```
 
 ## Usage

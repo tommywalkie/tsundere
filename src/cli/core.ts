@@ -1,3 +1,8 @@
+import { join, dirname } from 'path'
+import { promises } from 'fs'
+import { TsundereCallback } from '../'
+import { reporter } from './docopt'
+
 type FixedSizeArray<N extends number, T> = N extends 0 ? never[] : {
     0: T;
     length: N;
@@ -8,40 +13,44 @@ type FixedSizeArray<N extends number, T> = N extends 0 ? never[] : {
  */
 export type SinglePairArray<T> = FixedSizeArray<1, T> | FixedSizeArray<2, T>
 
-export type TsundereCliOption = {
-    labels: SinglePairArray<string>
+export type TsundereOption = {
+    aliases: SinglePairArray<string>
     description: string
     defaultValue: string | boolean
 }
 
-export type TsundereCliExpectedValue = {
-    label: string
+export type TsundereCommand = {
+    alias: string
     description: string
-    optional: boolean
+    callback: TsundereCallback
 }
 
-export type TsundereCliCommand = {
-    aliases: Array<string>
-    description: string
-    expectedValues: Array<TsundereCliExpectedValue>
-}
-
-export type TsundereCliFlag = Omit<TsundereCliOption, "defaultValue"> & {
+export type TsundereFlag = Omit<TsundereOption, "defaultValue"> & {
     defaultValue: boolean
 }
 
-export type TsundereCliValue = boolean | string
+export type TsundereCliValue = boolean | string | number
 
 export const FLAG_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)$/
-export const OPTION_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)[\= ](?<value>[a-zA-Z0-9\\\/\:\.]+)$/
+export const OPTION_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)[\= ](?<value>[\w\\\/\:\.\,\@]+)$/
 
 export const sanitizeValue = (value: TsundereCliValue) =>
     value === 'true' ? true : value === 'false' ? false : value
 
-export type TsundereParsedInputs = {
+export type TsundereInputContext = {
     commands: Array<TsundereCliValue>
     options: Record<string, TsundereCliValue>
     values: Array<TsundereCliValue>
+}
+
+export function uniques(a: Array<string>, b: string) {
+    return a.includes(b) ? a : [...a, b]
+}
+
+function __aliases(collection: Record<string, any>): Array<string> {
+    return [].concat(...Object.keys(collection)
+        .map(key => (collection as any)[key].aliases))
+        .reduce(uniques, [])
 }
 
 /**
@@ -49,50 +58,50 @@ export type TsundereParsedInputs = {
  * It still can be used for very simple use cases, though. 
  */
 export class TsundereCli {
-    commands: Array<TsundereCliCommand> = []
-    flags: Record<string, TsundereCliFlag>[] = []
-    options: Record<string, TsundereCliOption>[] = []
-    flag = (
-        labels: SinglePairArray<string>,
+    commands: Array<TsundereCommand> = []
+    flags: Record<string, TsundereFlag>[] = []
+    options: Record<string, TsundereOption>[] = []
+    private _fallback: TsundereCallback = async() => {}
+    private _manifest: Record<string, string> = {}
+    flag(
+        aliases: SinglePairArray<string>,
         description: string = '',
         defaultValue: boolean = false
-    ): this => {
-        labels.forEach((label: string) =>
+    ) {
+        aliases.forEach((label: string) =>
             (this.flags as any)[label] =
-                {labels, description, defaultValue} as TsundereCliFlag)
+                {aliases, description, defaultValue} as TsundereFlag)
         return this
     }
-    option = (
-        labels: SinglePairArray<string>,
+    option(
+        aliases: SinglePairArray<string>,
         description: string = '',
         defaultValue: TsundereCliValue = false
-    ): this => {
-        labels.forEach((label: string) =>
+    ) {
+        aliases.forEach((label: string) =>
             (this.options as any)[label] =
-                {labels, description, defaultValue} as TsundereCliOption)
+                {aliases, description, defaultValue} as TsundereOption)
         return this
     }
-    command = (
-        aliases: Array<string>,
+    command(
+        alias: string,
         description: string = '',
-        expectedValues: Array<TsundereCliExpectedValue> = []
-    ): this => {
-        aliases.forEach((alias: string) =>
-            (this.commands as any)[alias] =
-                {aliases, description, expectedValues} as TsundereCliCommand)
+        callback: TsundereCallback
+    ) {
+        (this.commands as any)[alias] =
+            {alias, description, callback} as TsundereCommand
         return this
     }
-    parse = (args: string[]): TsundereParsedInputs => {
+    private async help(parsed: TsundereInputContext) {
+        console.log(reporter(this._manifest, this.commands, this.options, this.flags))
+    }
+    parse = (
+        args: string[] = [...process.argv.filter((_, index) => index > 1)]
+    ): TsundereInputContext => {
         let options: Record<string, TsundereCliValue> = {}
         let values: string[] = []
         let commands: string[] = []
         let __expect_command: boolean = true
-        const __labels: string[] = []
-            .concat(...Object.keys(this.flags).map(key => (this.flags as any)[key].labels))
-            .reduce((unique, item) => unique.includes(item) ? unique : [...unique, item], [])
-        const __commands: string[] = []
-            .concat(...Object.keys(this.commands).map(key => (this.flags as any)[key].aliases))
-            .reduce((unique, item) => unique.includes(item) ? unique : [...unique, item], [])
         args.forEach((arg, index) => {
             if (index > 1) __expect_command = false
             const previous = index > 0 ? args[index-1] : ''
@@ -105,18 +114,40 @@ export class TsundereCli {
                     sanitizeValue(arg.replace(OPTION_PATTERN, '$<value>'))
                 __expect_command = false
             }
-            else if (index > 0 && OPTION_PATTERN.test(`${previous} ${arg}`) && !__labels.includes(previous)) {
+            else if (
+                index > 0
+                && OPTION_PATTERN.test(`${previous} ${arg}`)
+                && !__aliases(this.flags).includes(previous)
+            ) {
                 options[previous.replace(FLAG_PATTERN, '$<flag>')] = sanitizeValue(arg)
                 __expect_command = false
             }
-            else if (__expect_command && __commands.includes(arg)) {
+            else if (__expect_command && Object.keys(this.commands).includes(arg))
                 commands.push(arg)
+            else {
+                __expect_command = false
+                values.push(arg)
             }
-            else values.push(arg)
         })
         return {commands, options, values}
     }
-    run = () => {
-        console.log(this.parse([...process.argv.filter((_, index) => index > 1)]))
+    public fallback(callback: TsundereCallback) {
+        this._fallback = callback
+        return this
+    }
+    run = async () => {
+        // TODO: use Rollup and parse the relevant manifest data directly
+        this._manifest = await promises
+            .readFile(join(dirname(__dirname), 'package.json'), 'utf8')
+            .then(data => JSON.parse(data))
+        const {commands, options, values} = this.parse()
+        console.log({commands, options, values})
+        if (commands.length) {
+
+        }
+        else if (Object.keys(options).includes('help') || Object.keys(options).includes('h'))
+            await this.help({commands, options, values})
+        else
+            this._fallback({ version: this._manifest.version })
     }
 }

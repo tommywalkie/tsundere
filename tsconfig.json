@@ -3,6 +3,7 @@
     "compilerOptions": {
         "baseUrl": ".",
         "strict": true,
-        "types": ["node"]
+        "types": ["node"],
+        "downlevelIteration": true
     }
 }
