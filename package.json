@@ -1,12 +1,17 @@
 {
   "name": "tsundere",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Modern task runner for the stubborn ones",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "bin": "dist/cli.js",
   "sideEffects": false,
+  "exports": {
+    "require": "./dist/index.js",
+    "import": "./dist/index.esm.js",
+    "default": "./dist/index.esm.js"
+  },
   "scripts": {
     "build": "yall -p build:transpile build:types && yall build:bundle",
     "build:bundle": "yall -s build:babel build:rollup",
