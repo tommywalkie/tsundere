@@ -1,12 +1,20 @@
+/**
+ * This is purely intended for the IE10 compatible UMD build
+ * (`/dist/legacy/index.js`).
+ *
+ * After being transpiled by ESBuild, 
+ * Babel takes care of polyfilling and transforming unsupported ES5 features,
+ * notably `async/await` and spread operator.
+ */
 {
     "presets": [[ "@babel/preset-env", { "targets": { "ie": "10" } } ]],
     "plugins": [
         "@babel/plugin-transform-classes",
-        "minify-mangle-names",
         "@babel/plugin-proposal-object-rest-spread",
-        "babel-plugin-transform-es2015-parameters",
         "@babel/plugin-transform-spread",
         "@babel/plugin-transform-arrow-functions",
-        "@babel/transform-runtime"
+        "@babel/transform-runtime",
+        "babel-plugin-transform-es2015-parameters",
+        "minify-mangle-names"
     ]
 }

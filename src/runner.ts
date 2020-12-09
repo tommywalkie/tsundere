@@ -50,8 +50,9 @@ function __create_tasks(tasks: TsundereTask[], handler: Function) {
 
 /**
  * Stateful `TsundereTask` runner system, which provides a **Gulp**-like API
- * with `task`, `series` and `parallel` methods which register debiuggable tasks to be run
+ * with `task`, `series` and `parallel` methods which register tasks to be run
  * in parallel via `<TsundereRunner>.run()`
+ * 
  * @example
  * import { TsundereRunner, task } from 'tsundere'
  * 
@@ -81,10 +82,10 @@ function __create_tasks(tasks: TsundereTask[], handler: Function) {
  * ])
  * 
  * // This will log 'D' -> 'B' -> 'A' -> 'E' -> 'C' ...
- * ;(async () => await runner.run().then(report => {
- *     // ... Then the task suite report.
+ * runner.run().then(report => {
+ *     // Then will display the task suite report.
  *     console.log(report)
- * }))()
+ * })
  * 
  */
 export class TsundereRunner extends TsundereStore {
@@ -119,54 +120,36 @@ export class TsundereRunner extends TsundereStore {
             this.__auto_sub_end(tasks[i])
     }
     /**
-     * Add new nameless task for the task runner instance
+     * Register a newly created nameless task and set up 
+     * and bind events to the task runner instance.
      */
     task = (callback: TsundereCallback) => {
         return this.__auto_sub(__create_task(callback))
     }
     /**
-     * Label and register a newly created single task.
-     * 
-     * ```js
-     * import { TsundereRunner } from 'tsundere'
-     * const runner = new TsundereRunner()
-     * runner.describe('my-task', async () => { ... })
-     * ```
-     * 
-     * It is possible to register concurrent and sequential task suites,
-     * but if you need to register their actual sub-tasks and make them appear in the
-     * final report, you may use `describeSeries` or `describeParallel`
-     * instead.
-     * 
-     * ```js
-     * import { TsundereRunner, describeSeries, describe, series } from 'tsundere'
-     * const runner = new TsundereRunner()
-     *  
-     * runner.describe('suite-A', async () => await series[  // ✅ Registered
-     *   describe('task-A', async () => { ... }),           // ❌ Not registered
-     *   describe('task-B', async () => { ... })            // ❌ Not registered
-     * ])
-     * 
-     * runner.describeSeries('suite-B', [            // ✅ Registered
-     *   describe('task-C', async () => { ... }),   // ✅ Registered
-     *   describe('task-D', async () => { ... }),   // ✅ Registered
-     * ])
-     * ```
-     * 
+     * Label and register a newly created single task and 
+     * bind events to the task runner instance.
      */
     describe = async (name: string, callback: TsundereCallback) => 
         await this.__auto_sub_task(describe(name, __create_task(callback)))
     /**
-     * Label and register a newly created task **and** its concurrent sub-tasks,
-     * whether they are labelled or not,
+     * Label and register a newly created task including sequential sub-tasks.
+     * Can be used to explicitly tell the task runner to be aware of its
+     * sub-tasks when returning the final report.
      * 
      * @example
      * ```js
-     * import { TsundereRunner, describe, task } from 'tsundere'
+     * import { TsundereRunner, describeParallel, describe, parallel } from 'tsundere'
      * const runner = new TsundereRunner()
-     * runner.describeParallel('my-parralel-tasks', [
-     *    task(async () => { ... }),
-     *    describe('some-task', async () => { ... }),
+     *  
+     * runner.describe("my-suite", async () => await parallel[  // ✅ Registered
+     *   describe('task-A', ... ),                              // ❌ Not registered
+     *   describe('task-B', ... )                               // ❌ Not registered
+     * ])
+     * 
+     * runner.describeParallel("my-suite", [    // ✅ Registered
+     *   describe('task-C', ... ),              // ✅ Registered
+     *   describe('task-D', ... ),              // ✅ Registered
      * ])
      * ```
      */
@@ -175,16 +158,23 @@ export class TsundereRunner extends TsundereStore {
         return await this.describe(name, async () => await parallel(tasks))
     }
     /**
-     * Label and register a newly created task **and** its sequential sub-tasks,
-     * whether they are labelled or not,
+     * Label and register a newly created task  including sequential sub-tasks.
+     * Can be used to explicitly tell the task runner to be aware of its
+     * sub-tasks when returning the final report.
      * 
      * @example
      * ```js
-     * import { TsundereRunner, describe, task } from 'tsundere'
+     * import { TsundereRunner, describeParallel, describe, series } from 'tsundere'
      * const runner = new TsundereRunner()
-     * runner.describeSeries('my-parralel-tasks', [
-     *    task(async () => { ... }),
-     *    describe('some-task', async () => { ... }),
+     *  
+     * runner.describe("my-suite", async () => await series[  // ✅ Registered
+     *   describe('task-A', ... ),                            // ❌ Not registered
+     *   describe('task-B', ... )                             // ❌ Not registered
+     * ])
+     * 
+     * runner.describeSeries("my-suite", [    // ✅ Registered
+     *   describe('task-C', ... ),            // ✅ Registered
+     *   describe('task-D', ... ),            // ✅ Registered
      * ])
      * ```
      */
@@ -193,11 +183,47 @@ export class TsundereRunner extends TsundereStore {
         return await this.describe(name, async () => await series(tasks))
     }
     /**
-     * Register newly created task **and** its concurrent sub-tasks
+     * Register newly created task including concurrent sub-tasks.
+     * Can be used to explicitly tell the task runner to be aware of its
+     * sub-tasks when returning the final report.
+     * 
+     * @example
+     * ```js
+     * import { TsundereRunner, describe, parallel, task } from 'tsundere'
+     * const runner = new TsundereRunner()
+     *  
+     * runner.task(async () => await parallel([   // ✅ Registered
+     *   describe('task-A', ... ),                // ❌ Not registered
+     *   describe('task-B', ... )                 // ❌ Not registered
+     * ])
+     * 
+     * runner.parallel([               // ✅ Registered
+     *   describe('task-C', ... ),     // ✅ Registered
+     *   describe('task-D', ... ),     // ✅ Registered
+     * ])
+     * ```
      */
     parallel = async (tasks: TsundereTask[]) => await this.__group_task(tasks, parallel)
     /**
-     * Register newly created task **and** its sequential sub-tasks
+     * Register newly created task including sequential sub-tasks.
+     * Can be used to explicitly tell the task runner to be aware of its
+     * sub-tasks when returning the final report.
+     * 
+     * @example
+     * ```js
+     * import { TsundereRunner, describe, series, task } from 'tsundere'
+     * const runner = new TsundereRunner()
+     *  
+     * runner.task(async () => await series[   // ✅ Registered
+     *   describe('task-A', ... ),             // ❌ Not registered
+     *   describe('task-B', ... )              // ❌ Not registered
+     * ])
+     * 
+     * runner.series([               // ✅ Registered
+     *   describe('task-C', ... ),   // ✅ Registered
+     *   describe('task-D', ... ),   // ✅ Registered
+     * ])
+     * ```
      */
     series = async (tasks: TsundereTask[]) => await this.__group_task(tasks, series)
     /**

@@ -4,7 +4,7 @@ using it in production. API is not ready yet and can receive large changes.
 
 # Tsundere
 
-[![npm](https://img.shields.io/npm/v/tsundere)](https://www.npmjs.com/package/tsundere) [![minified size](https://badgen.net/bundlephobia/min/tsundere)](https://bundlephobia.com/result?p=tsundere@latest) ![dependency count](https://badgen.net/bundlephobia/dependency-count/tsundere) [![Known Vulnerabilities](https://snyk.io/test/npm/tsundere/latest/badge.svg)](https://snyk.io/test/npm/tsundere/latest)
+[![npm](https://img.shields.io/npm/v/tsundere)](https://www.npmjs.com/package/tsundere) [![minified size](https://badgen.net/bundlephobia/min/tsundere)](https://bundlephobia.com/result?p=tsundere@latest) [![dependency count](https://badgen.net/bundlephobia/dependency-count/tsundere)](https://bundlephobia.com/result?p=tsundere@latest) [![Known Vulnerabilities](https://snyk.io/test/npm/tsundere/latest/badge.svg)](https://snyk.io/test/npm/tsundere/latest)
 
 Tsundere is a modern, lightweight and type-safe task runner for the stubborn ones.
 
@@ -65,51 +65,70 @@ job.on('error', (e) => console.log(`Oops! Something went wrong..\n${e}`))
 Using `<TsundereTask>.run` method, the task will run and return a report, including relevant data as well as the duration in milliseconds.
 
 ```javascript
-job.run().then(data => { console.log(data); })
-// {
-//   "label": "my-task",
-//   "result": true,
-//   "duration": 1.4819
-// }
+job.run().then(report => { console.log(report); })
+/** 
+ * Output: {
+ *    "label": "my-task",
+ *    "result": true,
+ *    "duration": 1.4819
+ * }
+ */
 ```
 
-Tasks may be run concurrently, using `parallel`.
+Nameless or labelled tasks can be grouped and run concurrently, using `parallel` or in sequence, using `series` methods.
 
 ```js
-import { parallel } from 'tsundere'
-const suite = parallel([promiseA, promiseB, promiseC])
+import { parallel, series } from 'tsundere'
+parallel([/* Insert your tasks here */]).run().then(report => { console.log(report); })
+series([/* Insert your tasks here */]]).run().then(report => { console.log(report); })
 ```
 
-Or in sequence, using `series`.
+Using `describeParallel` or `describeSeries` allows you to create and label your task group.
 
 ```js
-import { series } from 'tsundere'
-const suite = series([promiseA, promiseB, promiseC])
+import { describeParallel, describeSeries } from 'tsundere'
+describeParallel('parallel-tasks', [/* Insert your tasks here */]).run()
+describeSeries('sequence-tasks', [/* Insert your tasks here */]).run()
 ```
 
-You can also set up a `TsundereRunner` task runner to run tasks inside a context and chain tasks and reduce boilerplate code related to event subscriptions. Registered tasks will be run in parallel when using `<TsundereRunner>.run`.
+You can also set up a `TsundereRunner` task runner to run and chain tasks under a same context and reduce boilerplate code (_e.g._ events, formatting). Registered tasks will be run in parallel when using `<TsundereRunner>.run`. 
 
-```typescript
-import { TsundereRunner, task } from 'tsundere'
+Under the hood, when relying on `<TsundereRunner>.parallel`, `<TsundereRunner>.series`, `<TsundereRunner>.describeParallel` or `<TsundereRunner>.describeSeries` methods, the task runner is explicitly aware of the related sub-tasks and will correctly format the final report.
+
+```javascript
+import { TsundereRunner, describe, task } from 'tsundere'
+
+// Sample promise
 function timeout(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve(true), ms));
 }
-function log(char) {
-    console.log(char)
-    return () => char
-}
-const tsundere: TsundereRunner = new TsundereRunner() 
-tsundere.task(async () => await timeout(300).then(log('A')))
-tsundere.parallel([
-  task(async () => await timeout(650).then(log('B'))),
-  task(async () => await timeout(800).then(log('C')))
-])
+
+// Let's setup our task runner
+const tsundere = new TsundereRunner() 
+tsundere.task(async () => await timeout(300))
+tsundere.describe('A', async () => await timeout(400))
 tsundere.series([
-  task(async () => await timeout(700).then(log('D'))),
-  task(async () => await timeout(500).then(log('E'))),
-  task(async () => await timeout(200).then(log('F')))
+  describe('B', async () => await timeout(700)),
+  describe('C', async () => await timeout(450)),
 ])
-tsundere.run().then(data => { console.log(data); })
+tsundere.describeParallel('D', [
+  describe('E', async () => await timeout(750)),
+  task(async () => await timeout(600)),
+])
+
+tsundere.run().then(report => { console.log(report); })
+/**
+ * Output: [
+ *   { label: undefined, result: true, duration: 301.2114 },
+ *   { label: "A", result: true, duration: 402.8211 },
+ *   { label: undefined, result: true, duration: 603.0201 },
+ *   { label: "B", result: true, duration: 702.3147 },
+ *   { label: "E", result: true, duration: 753.3701 },
+ *   { label: "D", result: [ [...], [...] ], duration: 754.0116 }
+ *   { label: "C", result: true, duration: 450.1668 },
+ *   { label: undefined, result: [ [...], [...] ], duration: 1152.0446 }
+ * ]
+ */
 ```
 
 ## Contributing

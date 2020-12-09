@@ -1,5 +1,12 @@
 {
-    "include": ["src/**/*", "dist/**/*", "./test.ts"],
+    "ts-node": {
+        "transpileOnly": true,
+        "compilerOptions": {
+            "module": "commonjs"
+        },
+        "include": [ "tests/**/*" ]
+    },
+    "include": ["src/**/*", "dist/**/*"],
     "compilerOptions": {
         "baseUrl": ".",
         "target": "ES5",
