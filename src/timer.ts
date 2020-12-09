@@ -7,20 +7,20 @@ const hrToMs = (hrtime: [number, number]): number =>
 /**
  * Starts a timer, node and browser compatible.
  */
-let startTimer: () => [number, number] | number
+let startTimer: () => [number, number]
 
 /**
  * Compare timers, node and browser compatible.
  */
-let stopTimer: (previous: any) => number
+let stopTimer: (previous: [number, number]) => number
 
 if ([typeof window, typeof document].includes('undefined')) {
    startTimer = () => process.hrtime()
    stopTimer = (previous: [number, number]) => hrToMs(process.hrtime(previous))
 }
 else {
-   startTimer = () => performance.now()
-   stopTimer = (previous: number) => performance.now() - previous
+   startTimer = () => [0, performance.now()]
+   stopTimer = (previous: [number, number]) => performance.now() - previous[1]
 }
 
 export { startTimer, stopTimer }

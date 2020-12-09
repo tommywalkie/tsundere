@@ -24,8 +24,9 @@ export default [{
   input: '__dev__/index.js',
   output: {
     file: 'dist/index.js',
-    format: 'cjs',
-    exports: 'named',
+    format: 'umd',
+    exports: 'auto',
+    name: 'tsundere'
   },
   plugins: [
     resolve({ preferBuiltins: true }),
@@ -36,8 +37,23 @@ export default [{
     input: '__dev__/index.js',
     output: {
       file: 'dist/index.min.js',
-      format: 'cjs',
-      exports: 'named',
+      format: 'umd',
+      exports: 'auto',
+      name: 'tsundere'
+    },
+    plugins: [
+      resolve({ preferBuiltins: true }),
+      commonjs(),
+      terser(),
+      { banner() { return notice } }
+    ]
+}, {
+    input: '__dev__/legacy/index.js',
+    output: {
+      file: 'dist/legacy/index.js',
+      format: 'umd',
+      exports: 'auto',
+      name: 'tsundere'
     },
     plugins: [
       resolve({ preferBuiltins: true }),
@@ -63,16 +79,24 @@ export default [{
     input: '__dev__/esm/bundle.js',
     output: {
       file: 'dist/index.esm.js',
+      format: 'es',
     },
+    external: ['fs', 'path'],
     plugins: [
+      resolve({ preferBuiltins: true }),
+      commonjs(),
       { banner() { return notice } }
     ]
 }, {
     input: '__dev__/esm/bundle.js',
     output: {
       file: 'dist/index.esm.min.js',
+      format: 'es',
     },
+    external: ['fs', 'path'],
     plugins: [
+      resolve({ preferBuiltins: true }),
+      commonjs(),
       terser(),
       { banner() { return notice } }
     ]

@@ -20,3 +20,6 @@ tsconfig.json
 
 # Include license
 !LICENSE
+
+# Github assets and workflows
+.github

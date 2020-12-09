@@ -2,6 +2,7 @@
     "include": ["src/**/*", "dist/**/*", "./test.ts"],
     "compilerOptions": {
         "baseUrl": ".",
+        "target": "ES5",
         "strict": true,
         "types": ["node"],
         "downlevelIteration": true

@@ -9,7 +9,7 @@ import {
     TsundereTask,
     TsundereTask as Task,
     task,
-    namedTask
+    describe
 } from './task'
 
 export type {
@@ -22,11 +22,11 @@ export type {
 import {
     series,
     parallel,
+    describeParallel,
+    describeSeries,
     TsundereRunner,
     TsundereRunner as Runner
 } from './runner'
-
-export type {TsundereCli} from './cli'
 
 export {
     TsundereRunner,
@@ -35,8 +35,10 @@ export {
     series,
     parallel,
     task,
-    namedTask,
+    describe,
     Task,
+    describeParallel,
+    describeSeries
 }
 
 const _default = {
@@ -46,8 +48,10 @@ const _default = {
     series,
     parallel,
     task,
-    namedTask,
+    describe,
     Task,
+    describeParallel,
+    describeSeries
 }
 
 export default _default
